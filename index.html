@@ -37,12 +37,11 @@
             <label class="form-label mb-0">Attendance (%):</label>
             <select v-model.number="subject.attendance" class="form-select">
               <option disabled value="">Select</option>
-              <option>95</option>
               <option>90</option>
               <option>85</option>
               <option>80</option>
               <option>75</option>
-              <option>70</option>
+              <option>less</option>
             </select>
           </div>
         </div>
@@ -59,7 +58,7 @@
         <div class="col-md-4 mb-3" v-for="(subject, index) in subjects" :key="index">
           <div class="card shadow-sm text-center p-3">
             <h6 class="mb-2">{{ subject.name }}</h6>
-            <span class="badge bg-primary fs-5">{{ subject.totalMarks }} / 25</span>
+            <span class="badge bg-primary fs-5">{{ subject.totalMarks }} / 30</span>
           </div>
         </div>
       </div>
@@ -96,12 +95,14 @@
         },
         validateAndCalculate() {
           for (let subject of this.subjects) {
-            if (!subject.name || subject.sm1 === '' || subject.sm2 === '' || subject.as1 === '' || subject.as2 === '' ||
-                subject.q1 === '' || subject.q2 === '' || subject.attendance === '') {
+            if (
+              !subject.name || subject.sm1 === '' || subject.sm2 === '' || subject.as1 === '' ||
+              subject.as2 === '' || subject.q1 === '' || subject.q2 === '' || subject.attendance === ''
+            ) {
               this.errorMessage = 'Please fill all fields correctly.';
               return;
             }
-
+        
             if (
               subject.sm1 < 0 || subject.sm1 > 18 ||
               subject.sm2 < 0 || subject.sm2 > 18 ||
@@ -110,11 +111,11 @@
               subject.q1 < 0 || subject.q1 > 12 ||
               subject.q2 < 0 || subject.q2 > 12
             ) {
-              this.errorMessage = 'Please enter valid marks within allowed limits.';
+              this.errorMessage = 'Marks must be within valid range.';
               return;
             }
           }
-
+        
           this.errorMessage = '';
           this.subjects.forEach(subject => {
             const sm1 = parseFloat(subject.sm1);
@@ -124,36 +125,34 @@
             const q1 = parseFloat(subject.q1);
             const q2 = parseFloat(subject.q2);
             const att = parseFloat(subject.attendance);
-
-            const smWeighted = sm1 > sm2
-              ? sm1 * 0.8 + sm2 * 0.2
-              : sm1 < sm2
-              ? sm1 * 0.2 + sm2 * 0.8
-              : sm1 * 0.8 + sm2 * 0.2;
-
-            const asWeighted = as1 > as2
-              ? (as1 / 12) * 2.8 + (as2 / 12) * 0.7
-              : as1 < as2
-              ? (as1 / 12) * 0.7 + (as2 / 12) * 2.8
-              : (as1 / 12) * 2.8 + (as2 / 12) * 0.7;
-
-            const qWeighted = q1 > q2
-              ? (q1 / 12) * 2.8 + (q2 / 12) * 0.7
-              : q1 < q2
-              ? (q1 / 12) * 0.7 + (q2 / 12) * 2.8
-              : (q1 / 12) * 2.8 + (q2 / 12) * 0.7;
-
+        
+            const sm_high = Math.max(sm1, sm2);
+            const sm_low = Math.min(sm1, sm2);
+            const sessionalMarks = 0.8 * sm_high + 0.2 * sm_low;
+        
+            const as_high = Math.max(as1, as2);
+            const as_low = Math.min(as1, as2);
+            const assignmentRaw = 0.8 * as_high + 0.2 * as_low;
+            const assignmentMarks = (assignmentRaw / 12) * 3.5;
+        
+            const q_high = Math.max(q1, q2);
+            const q_low = Math.min(q1, q2);
+            const quizRaw = 0.8 * q_high + 0.2 * q_low;
+            const quizMarks = (quizRaw / 12) * 3.5;
+        
             let attMarks = 0;
             if (att >= 90) attMarks = 5;
             else if (att >= 85) attMarks = 4;
             else if (att >= 80) attMarks = 3;
             else if (att >= 75) attMarks = 2;
-
-            subject.totalMarks = Math.round(smWeighted + asWeighted + qWeighted + attMarks * 100) / 100;
+            else attMarks = 0;
+        
+            const total = sessionalMarks + assignmentMarks + quizMarks + attMarks;
+            subject.totalMarks = Math.round(total * 100) / 100;
           });
-
+        
           this.step = 3;
-        }
+        }        
       }
     }).mount('#app');
   </script>
